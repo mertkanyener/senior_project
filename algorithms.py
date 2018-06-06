@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import itertools
-import keras
 
 from preprocessing import Preprocessing
 from sklearn.model_selection import train_test_split, StratifiedKFold
@@ -12,24 +11,16 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix
 
-from keras.callbacks import Callback
-from keras.layers import Dense, Flatten, Dropout
-from keras.layers import Conv2D, MaxPooling2D
-from keras.models import Sequential
-from keras.losses import binary_crossentropy ,categorical_crossentropy
-from keras.optimizers import Adam
-
-
 
 
 # Creates and shows confusion matrix
 
-def confmat(classes, y_pred, y_test, cmap=plt.cm.Blues):
+def confmat(classes, y_pred, y_test, classifier, cmap=plt.cm.Blues):
 
     cm = confusion_matrix(y_test, y_pred)
 
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    plt.title('Confusion Matrix')
+    plt.title(classifier)
     plt.colorbar()
     tick_marks = np.arange(len(classes))
     plt.xticks(tick_marks, classes, rotation=45)
@@ -45,12 +36,6 @@ def confmat(classes, y_pred, y_test, cmap=plt.cm.Blues):
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
-
-
-
-
-
-
 
 
 
@@ -118,62 +103,19 @@ def run(option, random_state, classifier):
         print("K-Nearest Neighbors Classifier = 'knn'")
 
 
-class AccuracyHistory(Callback):
-    def on_train_begin(self, logs={}):
-        self.acc = []
-
-    def on_epoch_end(self, batch, logs={}):
-        self.acc.append(logs.get('acc'))
-
-
-def run_cnn(X_train, X_test, y_train, y_test):
-
-    batch_size = 20
-    num_classes = 2
-    epochs = 20
-    history = AccuracyHistory()
-
-    y_train = keras.utils.to_categorical(y_train, num_classes)
-    y_test = keras.utils.to_categorical(y_test, num_classes)
-
-    input_shape = (293, 293, 1)
+"""
+dir1 = "/home/mertkanyener/Desktop/Uni/Senior project/dataset_cut/BW_age_18-29_Neutral_bmp/female"
+dir2 = "/home/mertkanyener/Desktop/Uni/Senior project/dataset_cut/BW_age_18-29_Neutral_bmp/male"
+dir3 = "/home/mertkanyener/Desktop/Uni/Senior project/dataset_cut/BW_age_30-49_Neutral_bmp/female"
+dir4 = "/home/mertkanyener/Desktop/Uni/Senior project/dataset_cut/BW_age_30-49_Neutral_bmp/male"
+dir5 = "/home/mertkanyener/Desktop/Uni/Senior project/dataset_cut/BW_age_50-69_Neutral_bmp/female"
+dir6 = "/home/mertkanyener/Desktop/Uni/Senior project/dataset_cut/BW_age_50-69_Neutral_bmp/male"
+dir7 = "/home/mertkanyener/Desktop/Uni/Senior project/dataset_cut/BW_age_70-94_Neutral_bmp/female"
+dir8 = "/home/mertkanyener/Desktop/Uni/Senior project/dataset_cut/BW_age_70-94_Neutral_bmp/male"
+dataset = [dir1, dir2, dir3, dir4, dir5, dir6, dir7, dir8]
 
 
-    model = Sequential()
-    model.add(Conv2D(32, kernel_size=(5, 5), strides=(1, 1),
-                     activation='relu',
-                     input_shape=input_shape))
-    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-    model.add(Conv2D(32, (5, 5), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Conv2D(32, (5, 5), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Conv2D(64, (5, 5), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Flatten())
-    model.add(Dense(64, activation='relu'))
-    #model.add(Dropout(0.5))
-    model.add(Dense(num_classes, activation='softmax'))
-
-    model.compile(loss=binary_crossentropy,
-                  optimizer=Adam(lr=0.01),
-                  metrics=['accuracy'])
-    model.fit(X_train, y_train,
-              batch_size=batch_size,
-              epochs=epochs,
-              verbose=1,
-              validation_data=(X_test, y_test),
-              callbacks=[history])
-    score = model.evaluate(X_test, y_test, verbose=0)
-    print('Test loss:', score[0])
-    print('Test accuracy:', score[1])
-    plt.plot(range(1, 11), history.acc)
-    plt.xlabel('Epochs')
-    plt.ylabel('Accuracy')
-    plt.show()
-
-
-
+"""
 dir1 = "/home/mertkanyener/Desktop/Uni/Senior project/dataset_aligned_cut/BW_age_18-29_Neutral_bmp/female"
 dir2 = "/home/mertkanyener/Desktop/Uni/Senior project/dataset_aligned_cut/BW_age_18-29_Neutral_bmp/male"
 dir3 = "/home/mertkanyener/Desktop/Uni/Senior project/dataset_aligned_cut/BW_age_30-49_Neutral_bmp/female"
@@ -186,47 +128,182 @@ dataset = [dir1, dir2, dir3, dir4, dir5, dir6, dir7, dir8]
 
 prp = Preprocessing()
 X, y_gender, y_age = prp.read_data(dataset)
+X = prp.vectorize(X)
 X, y_gender = np.asarray(X), np.asarray(y_gender)
-X = X.reshape(X.shape[0], 293, 293, 1)
-#X = prp.vectorize(X)
-X_train, X_test, y_train, y_test = train_test_split(X, y_gender, test_size=0.2, random_state=2, stratify=y_gender)
-run_cnn(X_train, X_test, y_train, y_test)
+y_age = np.asarray(y_age)
+#X = X.reshape(X.shape[0], 293, 293, 1)
+X_train, X_test, y_train, y_test = train_test_split(X, y_age, test_size=0.2, random_state=2, stratify=y_age)
 
-# Define classifiers
-
-# Logistic Regression
+classes_age = ['Age 18-29', 'Age 30-49', 'Age 50-69', 'Age 70-94']
+classes_gender = ['Female', 'Male']
 """
-lr = LogisticRegression(C=1.0, random_state=2)
-svm = SVC(C=1.0, kernel='linear', random_state=9)
+# Age Estimation
 
-kfold = StratifiedKFold(n_splits=10, random_state=2)
-scores = []
-X, y_gender = np.asarray(X), np.asarray(y_gender)
+print("Age Classification: ")
+
+rnd = 1
+# Logistic Regression
+lr = LogisticRegression(C=1.0, random_state=rnd)
+lr.fit(X_train, y_train)
+y_pred = lr.predict(X_test)
+print('Logistic Regression:')
+print('Accuracy: %.3f' % accuracy_score(y_test, y_pred))
+plt.figure()
+confmat(classes_age, y_pred, y_test, 'Logistic Regression')
+plt.show()
+
+# Random Forest Classifier
+
+forest = RandomForestClassifier(criterion='gini', n_estimators=500, n_jobs=2, random_state=rnd)
+forest.fit(X_train, y_train)
+y_pred = forest.predict(X_test)
+print('Random Forest:')
+print('Accuracy: %.3f' % accuracy_score(y_test, y_pred))
+plt.figure()
+confmat(classes_age, y_pred, y_test, 'Random Forest')
+plt.show()
+
+# SVM 
+
+svm = SVC(kernel='linear', random_state=rnd)
+svm.fit(X_train, y_train)
+y_pred = svm.predict(X_test)
+print('SVM:')
+print('Accuracy: %.3f' % accuracy_score(y_test, y_pred))
+plt.figure()
+confmat(classes_age, y_pred, y_test, 'SVM')
+plt.show()
+
+# KNN
+
+knn = KNeighborsClassifier(n_neighbors=5)
+knn.fit(X_train, y_train)
+y_pred = knn.predict(X_test)
+print('KNN:')
+print('Accuracy: %.3f' % accuracy_score(y_test, y_pred))
+plt.figure()
+confmat(classes_age, y_pred, y_test, 'KNN')
+plt.show()
+
+"""
+"""
+# Gender Classification
+
+lr = LogisticRegression(C=1.0, random_state=rnd)
+lr.fit(X_train, y_train)
+y_pred = lr.predict(X_test)
+print('Logistic Regression:')
+print('Accuracy: %.3f' % accuracy_score(y_test, y_pred))
+plt.figure()
+confmat(classes_gender, y_pred, y_test, 'Logistic Regression')
+plt.show()
+
+forest = RandomForestClassifier(criterion='gini', n_estimators=500, n_jobs=2, random_state=rnd)
+forest.fit(X_train, y_train)
+y_pred = forest.predict(X_test)
+print('Random Forest:')
+print('Accuracy: %.3f' % accuracy_score(y_test, y_pred))
+plt.figure()
+confmat(classes_gender, y_pred, y_test, 'Random Forest')
+plt.show()
+
+svm = SVC(kernel='linear', random_state=rnd)
+svm.fit(X_train, y_train)
+y_pred = svm.predict(X_test)
+print('SVM:')
+print('Accuracy: %.3f' % accuracy_score(y_test, y_pred))
+plt.figure()
+confmat(classes_gender, y_pred, y_test, 'SVM')
+plt.show()
+
+knn = KNeighborsClassifier(n_neighbors=5)
+knn.fit(X_train, y_train)
+y_pred = knn.predict(X_test)
+print('KNN:')
+print('Accuracy: %.3f' % accuracy_score(y_test, y_pred))
+plt.figure()
+confmat(classes_gender, y_pred, y_test, 'KNN')
+plt.show()
+
+"""
+"""
+print()
+
 for k, (train, test) in enumerate(kfold.split(X, y_gender)):
     svm.fit(X[train], y_gender[train])
     score = svm.score(X[test], y_gender[test])
+    print("Fold ", k+1, " accuracy: %.3f" % score)
+    scores.append(score)
+print("SVM accuracy: %.3f" % np.mean(scores))
+
+for k, (train, test) in enumerate(kfold.split(X, y_gender)):
+    lr.fit(X[train], y_gender[train])
+    score = lr.score(X[test], y_gender[test])
+    print("Fold ", k, " accuracy: %.3f" % score)
+    scores.append(score)
+print("Logistic Regression accuracy: %.3f" % np.mean(scores))
+
+for k, (train, test) in enumerate(kfold.split(X, y_gender)):
+    forest.fit(X[train], y_gender[train])
+    score = forest.score(X[test], y_gender[test])
+    print("Fold ", k, " accuracy: %.3f" % score)
+    scores.append(score)
+print("Random Forest accuracy: %.3f" % np.mean(scores))
+
+for k, (train, test) in enumerate(kfold.split(X, y_gender)):
+    knn.fit(X[train], y_gender[train])
+    score = knn.score(X[test], y_gender[test])
+    print("Fold ", k, " accuracy: %.3f" % score)
+    scores.append(score)
+print("KNN accuracy: %.3f" % np.mean(scores))
+"""
+
+# K fold Age Classification
+
+lr = LogisticRegression(C=1.0, random_state=9)
+svm = SVC(C=1.0, kernel='linear', random_state=9)
+forest = RandomForestClassifier(criterion='gini', n_estimators=500, random_state=9)
+knn = KNeighborsClassifier(n_neighbors=7)
+
+kfold = StratifiedKFold(n_splits=10, random_state=9)
+scores = []
+X, y_gender, y_age = np.asarray(X), np.asarray(y_gender), np.asarray(y_age)
+
+print("Age Classification kfold: ")
+
+for k, (train, test) in enumerate(kfold.split(X, y_age)):
+    svm.fit(X[train], y_age[train])
+    score = svm.score(X[test], y_age[test])
     print("Fold ", k, " accuracy: %.3f" % score)
     scores.append(score)
 print("SVM accuracy: %.3f" % np.mean(scores))
-"""
 
-"""
-print("Age classification: ")
+for k, (train, test) in enumerate(kfold.split(X, y_age)):
+    lr.fit(X[train], y_age[train])
+    score = lr.score(X[test], y_age[test])
+    print("Fold ", k, " accuracy: %.3f" % score)
+    scores.append(score)
+print("Logistic Regression accuracy: %.3f" % np.mean(scores))
+
+for k, (train, test) in enumerate(kfold.split(X, y_age)):
+    forest.fit(X[train], y_age[train])
+    score = forest.score(X[test], y_age[test])
+    print("Fold ", k, " accuracy: %.3f" % score)
+    scores.append(score)
+print("Random Forest accuracy: %.3f" % np.mean(scores))
+
+for k, (train, test) in enumerate(kfold.split(X, y_age)):
+    knn.fit(X[train], y_age[train])
+    score = knn.score(X[test], y_age[test])
+    print("Fold ", k, " accuracy: %.3f" % score)
+    scores.append(score)
+print("KNN accuracy: %.3f" % np.mean(scores))
 
 
-run('age', 9, 'logreg')
-run('age', 9, 'knn')
-run('age', 9, 'svm')
-run('age', 9, 'forest')
 
-print("Gender Classification: ")
 
-run('gender', 9, 'logreg')
-run('gender', 9, 'knn')
-run('gender', 9, 'svm')
-run('gender', 9, 'forest')
 
-"""
+
 
 
 
